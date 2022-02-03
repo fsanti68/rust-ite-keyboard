@@ -8,7 +8,7 @@ use std::env;
 
 mod device_error;
 mod device_setup;
-mod colors;
+mod color;
 
 fn get_range(s: &str, max: usize) -> Vec<usize> {
     let mut r: Vec<usize> = Vec::new();
@@ -73,17 +73,22 @@ fn usage(args: &Vec<String>, root_warning: bool) {
             "    {}                                  last 2 keys of rows 1, 4 and 5",
             spaces
         );
+        print!(" Available colors:");
+        for color in color::get_color_names() {
+            print!(" {}", color);
+        }
+        println!("");
     }
 }
 
 fn list_devices() {
-    let mut ctx = libusb::Context::new().unwrap();
+    let ctx = libusb::Context::new().unwrap();
     let devices = ctx.devices().unwrap();
     device_setup::list_devices(devices);
 }
 
 fn set_mode(mode: &str) {
-    let mut ctx = libusb::Context::new().unwrap();
+    let ctx = libusb::Context::new().unwrap();
     let devices = ctx.devices().unwrap();
     let keyboard_result = device_setup::get_keyboard(devices, 0x048d, 0xce00);
 
@@ -93,8 +98,8 @@ fn set_mode(mode: &str) {
     }
 }
 
-fn set_color(colors: &[[u32; 21]; 6]) {
-    let mut ctx = libusb::Context::new().unwrap();
+fn set_color(colors: &[[&(u8, u8, u8); 21]; 6]) {
+    let ctx = libusb::Context::new().unwrap();
     let devices = ctx.devices().unwrap();
     let keyboard_result = device_setup::get_keyboard(devices, 0x048d, 0xce00);
 
@@ -124,15 +129,19 @@ fn main() {
             println!("set mode to {}", mode);
             set_mode(mode);
         } else if "color".eq(cmd) {
-            let mut colors: [[u32; 21]; 6] = [[0x0; 21]; 6];
+            let black = color::get_color_by_name("black");
+            let mut colors: [[&(u8, u8, u8); 21]; 6] = [[black; 21]; 6];
             while i < args.len() - 2 {
                 let rows = get_range(&args[i + 1].to_lowercase(), 5);
                 let cols = get_range(&args[i + 2].to_lowercase(), 20);
-                let color = &args[i + 3];
-                i += 3;
-                for row in rows {
-                    for col in cols.clone() {
-                        colors[row][col] = colors::get_color(&color);
+                {
+                    let color = args[i + 3].clone();
+                    i += 3;
+                    for row in rows {
+                        for col in cols.clone() {
+                            let c: &str = &color[..];
+                            colors[row][col] = color::get_color_by_name(c);
+                        }
                     }
                 }
                 set_color(&colors);

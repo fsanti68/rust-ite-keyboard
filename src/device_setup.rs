@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::time::Duration;
-use palette::rgb::Rgb;
 
 use libusb::{Device, DeviceHandle, DeviceList, Direction, DeviceDescriptor};
 
@@ -37,7 +36,7 @@ lazy_static! {
 type DeviceResult<T> = Result<T, DeviceError>;
 
 pub fn list_devices(devices: DeviceList) {
-    for mut device in devices.iter() {
+    for device in devices.iter() {
         let device_desc = device.device_descriptor().unwrap();
 
         println!(
@@ -161,14 +160,14 @@ pub fn setup_mode(k: &mut Device, mode: &str) {
     }
 }
 
-fn set_row_colors(handle: &mut DeviceHandle, iface: u8, endpoint: u8, colors: &[[u32; 21]; 6]) {
+fn set_row_colors(handle: &mut DeviceHandle, iface: u8, endpoint: u8, colors: &[[&(u8, u8, u8); 21]; 6]) {
     for r in 0..colors.len() {
         let mut msg: [u8; 64] = [0; 64];
         for c in 0..20 {
-            let rgb = Rgb::from_u32(&colors[r][c]);
-            msg[c + 0] /* blue */ = 255 * rgb.blue;
-            msg[c + 21] /* green */ = 255 * rgb.green;
-            msg[c + 42] /* red */ = 255 * rgb.red;
+            let (r, g, b) = colors[r][c];
+            msg[c + 0] /* blue */ = b.to_owned();
+            msg[c + 21] /* green */ = g.to_owned();
+            msg[c + 42] /* red */ = r.to_owned();
         }
 
         // send setup for row "r"
@@ -195,7 +194,7 @@ fn set_row_colors(handle: &mut DeviceHandle, iface: u8, endpoint: u8, colors: &[
     }
 }
 
-pub fn set_color(device: &mut Device, colors: &[[u32; 21]; 6]) {
+pub fn set_color(device: &mut Device, colors: &[[&(u8, u8, u8); 21]; 6]) {
     //println!("Device found: {:?}", device);
     match device.open() {
         Ok(mut handle) => {
