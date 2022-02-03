@@ -8,6 +8,7 @@ use std::env;
 
 mod device_error;
 mod device_setup;
+mod colors;
 
 fn get_range(s: &str, max: usize) -> Vec<usize> {
     let mut r: Vec<usize> = Vec::new();
@@ -84,21 +85,21 @@ fn list_devices() {
 fn set_mode(mode: &str) {
     let mut ctx = libusb::Context::new().unwrap();
     let devices = ctx.devices().unwrap();
-    let keyboard = device_setup::get_keyboard(devices, 0x048d, 0xce00);
+    let keyboard_result = device_setup::get_keyboard(devices, 0x048d, 0xce00);
 
-    match keyboard {
-        Ok(mut k) => device_setup::setup_mode(&mut k, mode),
+    match keyboard_result {
+        Ok(mut keyboard) => device_setup::setup_mode(&mut keyboard, mode),
         Err(e) => println!("{}", e),
     }
 }
 
-fn set_color(colors: &[[&str; 21]; 6]) {
+fn set_color(colors: &[[u32; 21]; 6]) {
     let mut ctx = libusb::Context::new().unwrap();
     let devices = ctx.devices().unwrap();
-    let keyboard = device_setup::get_keyboard(devices, 0x048d, 0xce00);
+    let keyboard_result = device_setup::get_keyboard(devices, 0x048d, 0xce00);
 
-    match keyboard {
-        Ok(mut k) => device_setup::set_color(&mut k, colors),
+    match keyboard_result {
+        Ok(mut keyboard) => device_setup::set_color(&mut keyboard, colors),
         Err(e) => println!("{}", e),
     }
 }
@@ -123,7 +124,7 @@ fn main() {
             println!("set mode to {}", mode);
             set_mode(mode);
         } else if "color".eq(cmd) {
-            let mut colors: [[&str; 21]; 6] = [[&"black"; 21]; 6];
+            let mut colors: [[u32; 21]; 6] = [[0x0; 21]; 6];
             while i < args.len() - 2 {
                 let rows = get_range(&args[i + 1].to_lowercase(), 5);
                 let cols = get_range(&args[i + 2].to_lowercase(), 20);
@@ -131,7 +132,7 @@ fn main() {
                 i += 3;
                 for row in rows {
                     for col in cols.clone() {
-                        colors[row][col] = &color;
+                        colors[row][col] = colors::get_color(&color);
                     }
                 }
                 set_color(&colors);
